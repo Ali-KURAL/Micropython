@@ -59,7 +59,7 @@ class Modbus:
         self._slaveID = slaveID
         self._uart = UART(uart_id, baudRate, bits=8, parity=None, stop=1, tx=Pin(tx), rx=Pin(rx))
         self._regSize = regSize
-        print("Slave device has been set you can use process(...) for communicating with mb master")
+        print("Slave device has been set you can use process(...).\nCommunicating with modbus master...")
 
     def process(self, registers):
         frame = self._uart.read()
