@@ -16,7 +16,7 @@ I2C pins as shown in the table below:
 | 3.3V(OUT)            | 36     | VIN      |
 
 
-![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/bme280/Pico-Pins.png)
+![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/bme280/bme280.png)
 
 
 
