@@ -16,7 +16,7 @@ UART pins as shown in the table below:
 | 5V(OUT)            | 40     | VBUS      |
 
 
-![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/bme280/bme280.png)
+![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/modbus_slave_rs485/rs485_pin.png)
 
 
 
