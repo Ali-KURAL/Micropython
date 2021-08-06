@@ -16,7 +16,7 @@ I2C pins as shown in the table below:
 | 3.3V(OUT)            | 36     | VIN      |
 
 
-![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/bh1750/BH1750.png)
+<img src="https://github.com/Ali-KURAL/Micropython/blob/main/libs/bh1750/BH1750.png" data-canonical-src="https://github.com/Ali-KURAL/Micropython/blob/main/libs/bh1750/BH1750.png" width="200" height="400" />
 
 
 
