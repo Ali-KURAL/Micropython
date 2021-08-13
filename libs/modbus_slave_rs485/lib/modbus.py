@@ -6,6 +6,9 @@ READ_DISCRETE_INPUTS = 0x02
 READ_HOLDING_REGISTERS = 0x03
 READ_INPUT_REGISTERS = 0x04
 
+WRITE_SINGLE_COIL = 0x05
+WRITE_SINGLE_REGISTER = 0x06
+
 BUFF_SIZE = 128
 
 
@@ -53,13 +56,72 @@ def calculateCRC(data):
     lsb = crc & 0xFF
     return (lsb << 8) + msb
 
+def zfill(string, width):
+    if len(string) < width:
+        return ("0" * (width - len(string))) + string
+    else:
+        return string
+
+
+def float_bin(my_number, places=3):
+    my_whole, my_dec = str(my_number).split(".")
+    my_whole = int(my_whole)
+    res = (str(bin(my_whole)) + ".").replace('0b', '')
+
+    for x in range(places):
+        my_dec = str('0.') + str(my_dec)
+        temp = '%1.20f' % (float(my_dec) * 2)
+        my_whole, my_dec = temp.split(".")
+        res += my_whole
+    return res
+
+
+def IEEE754(number):
+    sign = 0
+    if number < 0:
+        sign = 1
+        number = number * (-1)
+    p = 30
+    # convert float to binary
+    dec = float_bin(number, places=p)
+
+    dotPlace = dec.find('.')
+    onePlace = dec.find('1')
+    # finding the mantissa
+    if onePlace > dotPlace:
+        dec = dec.replace(".", "")
+        onePlace -= 1
+        dotPlace -= 1
+    elif onePlace < dotPlace:
+        dec = dec.replace(".", "")
+        dotPlace -= 1
+    mantissa = dec[onePlace + 1:]
+
+    # calculating the exponent(E)
+    exponent = dotPlace - onePlace
+    exponent_bits = exponent + 127
+
+    # converting the exponent from
+    # decimal to binary
+    exponent_bits = bin(exponent_bits).replace("0b", '')
+
+    mantissa = mantissa[0:23]
+
+    # the IEEE754 notation in binary
+    final = str(sign) +  zfill(exponent_bits,8) + mantissa
+
+    # convert the binary to hexadecimal
+    hstr = '0x%0*X' % ((len(final) + 3) // 4, int(final, 2))
+    return hstr
+
 
 class Modbus:
     def __init__(self, uart_id, baudRate, slaveID, regSize, tx, rx):
         self._slaveID = slaveID
         self._uart = UART(uart_id, baudRate, bits=8, parity=None, stop=1, tx=Pin(tx), rx=Pin(rx))
         self._regSize = regSize
-        print("Slave device has been set you can use process(...).\nCommunicating with modbus master...")
+        print("Slave device has been set you can use process(...) for communicating with mb master")
+        print("Waiting for master device...")
 
     def process(self, registers):
         frame = self._uart.read()
@@ -76,26 +138,35 @@ class Modbus:
 
             if (frame[0] is self._slaveID) or BCFlag:
                 crc = ((frame[buffer - 2] << 8) | frame[buffer - 1])
-                startingAddress = (frame[2] << 8) | frame[3]
-                no_of_registers = (frame[4] << 8) | frame[5]
-                maxData = startingAddress + no_of_registers
+                address_bytes = (frame[2] << 8) | frame[3]
+                register_value_bytes = (frame[4] << 8) | frame[5]
+                maxData = address_bytes + register_value_bytes
                 if calculateCRC(frame[:6]) == crc:
                     function = frame[1]
                     if ((function is READ_HOLDING_REGISTERS) or (function is READ_INPUT_REGISTERS)) and (not BCFlag):
-                        if startingAddress < self._regSize:
+                        if address_bytes < self._regSize:
                             if maxData <= self._regSize:
-                                no_of_bytes = no_of_registers * 2
+                                no_of_bytes = register_value_bytes * 2
                                 responseFrameSize = 5 + no_of_bytes
                                 sendArray[0] = self._slaveID
                                 sendArray[1] = function
                                 sendArray[2] = no_of_bytes
                                 address = 3
-                                for index in range(startingAddress, maxData):
+                                for index in range(address_bytes, maxData):
                                     temp = registers[index]
-                                    sendArray[address] = temp >> 8
-                                    address += 1
-                                    sendArray[address] = temp & 0xFF
-                                    address += 1
+                                    if temp % 1 is 0:
+                                        sendArray[address] = temp >> 8
+                                        address += 1
+                                        sendArray[address] = temp & 0xFF
+                                        address += 1
+                                    else:
+                                        float_bytes = IEEE754(temp)
+                                        for i in range(2, len(float_bytes), 2):
+                                            sendArray[address] = int(
+                                                "0x{}{}".format(float_bytes[i], float_bytes[i + 1]), 16)
+                                            address += 1
+                                        index += 1
+
                                 crc16 = calculateCRC(sendArray[:address])
                                 sendArray[responseFrameSize - 2] = crc16 >> 8
                                 sendArray[responseFrameSize - 1] = crc16 & 0xFF
@@ -103,9 +174,9 @@ class Modbus:
                                 self._uart.write(bytearray(sendArray[:responseFrameSize]))
 
                     elif ((function is READ_COILS) or (function is READ_DISCRETE_INPUTS)) and (not BCFlag):
-                        if startingAddress < self._regSize:
+                        if address_bytes < self._regSize:
                             if maxData <= self._regSize:
-                                no_of_bytes = math.ceil(no_of_registers / 8)
+                                no_of_bytes = math.ceil(register_value_bytes / 8)
                                 responseFrameSize = 5 + no_of_bytes
                                 sendArray[0] = self._slaveID
                                 sendArray[1] = function
@@ -113,7 +184,7 @@ class Modbus:
                                 address = 3
                                 decimals = ''
                                 byte_array = bytearray()
-                                for i in range(0, maxData - startingAddress, 8):
+                                for i in range(0, maxData - address_bytes, 8):
                                     if i + 8 < len(registers):
                                         decimals = [i for i in registers[i:i + 8]]
                                     elif i + 8 > len(registers):
@@ -131,10 +202,19 @@ class Modbus:
                                 sendArray[responseFrameSize - 2] = crc16 >> 8
                                 sendArray[responseFrameSize - 1] = crc16 & 0xFF
                                 self._uart.write(bytearray(sendArray[:responseFrameSize]))
-
+                    elif (function is WRITE_SINGLE_REGISTER) and (not BCFlag):
+                        registers[address_bytes] = register_value_bytes
+                        self._uart.write(bytearray(frame))
+                    elif (function is WRITE_SINGLE_COIL) and (not BCFlag):
+                        if register_value_bytes is 0x00:
+                            registers[address_bytes] = 0
+                        else:
+                            registers[address_bytes] = 1
+                        self._uart.write(bytearray(frame))
                 else:
                     raise ValueError("There is an error in CRC checking")
             else:
                 raise ValueError("There is an error in slaveID")
         else:
             raise ValueError("There is an error in Buffer Size")
+
