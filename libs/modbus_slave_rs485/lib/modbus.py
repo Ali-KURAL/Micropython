@@ -56,25 +56,6 @@ def calculateCRC(data):
     lsb = crc & 0xFF
     return (lsb << 8) + msb
 
-def zfill(string, width):
-    if len(string) < width:
-        return ("0" * (width - len(string))) + string
-    else:
-        return string
-
-
-def float_bin(my_number, places=3):
-    my_whole, my_dec = str(my_number).split(".")
-    my_whole = int(my_whole)
-    res = (str(bin(my_whole)) + ".").replace('0b', '')
-
-    for x in range(places):
-        my_dec = str('0.') + str(my_dec)
-        temp = '%1.20f' % (float(my_dec) * 2)
-        my_whole, my_dec = temp.split(".")
-        res += my_whole
-    return res
-
 class Modbus:
     def __init__(self, uart_id, baudRate, slaveID, regSize, tx, rx):
         self._slaveID = slaveID
