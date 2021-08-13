@@ -15,7 +15,7 @@ while True:
   hum = ss.moisture
   print()
   print('Temperature: ', temp)
-  print('Humidity: ', hum)
+  print('Moisture: ', hum)
   print()
 
   time.sleep(1)
