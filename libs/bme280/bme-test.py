@@ -9,7 +9,6 @@ sda_pin = 16
 i2c = machine.I2C(0,scl=machine.Pin(scl_pin), sda=machine.Pin(sda_pin),freq = 10000)
 
 bme = bme280.BME280(i2c=i2c)
-n = 0
 
 while True:
   temp = bme.getTemperature()
