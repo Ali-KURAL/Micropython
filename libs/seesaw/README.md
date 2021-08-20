@@ -1,7 +1,7 @@
-# Raspberry Pi Pico BME280 Sensor with Micropython Library
+# Raspberry Pi Pico Seesaw Soil Sensor with Micropython Library
 
 ## About
-This is a micropython library for BME280 Combined Humidity and Pressure Sensor
+This is a micropython library for Seesaw Soil Moisture Sensor
 
 ## Setup
 
@@ -33,6 +33,6 @@ Code automatically finds the i2c address when you give the i2c device in micropy
 
 If you want to use specific address for i2c you can use i2c_address label.
 ```python
-bme = bme280.BME280(i2c=i2c,i2c_address = 0x77)
+ss = seesaw.Device(i2c=i2c,i2c_address = 0x77)
 ```
 
