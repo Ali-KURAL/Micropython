@@ -16,7 +16,7 @@ I2C pins as shown in the table below:
 | 3.3V(OUT)            | 36     | VIN      |
 
 
-![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/bme280/bme280.png)
+![alt text](https://github.com/Ali-KURAL/Micropython/blob/main/libs/seesaw/afsoilsensor.png)
 
 
 
@@ -33,6 +33,6 @@ Code automatically finds the i2c address when you give the i2c device in micropy
 
 If you want to use specific address for i2c you can use i2c_address label.
 ```python
-ss = seesaw.Device(i2c=i2c,i2c_address = 0x77)
+ss = seesaw.Seesaw(i2c=i2c,i2c_address = 0x77)
 ```
 
