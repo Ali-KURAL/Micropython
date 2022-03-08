@@ -2,6 +2,7 @@ from machine import SPI, Pin
 
 class SPI_COM:
     def __init__(self, spi_id, cs):
+        print("MAY BE SOME ERRORS PLEASE USE NEW VERSION")
         self._spi = SPI(spi_id,
                         baudrate=1000000,
                         polarity=0,
