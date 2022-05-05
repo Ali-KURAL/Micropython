@@ -61,22 +61,6 @@ SET_NMEA_BAUDRATE_19200 = '$PMTK251,19200'
 SET_NMEA_BAUDRATE_9600 = '$PMTK251,9600'
 
 
-def transformLat(x, y):
-    ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * math.sqrt(abs(x))
-    ret += (20.0 * math.sin(6.0 * x * PI) + 20.0 * math.sin(2.0 * x * PI)) * 2.0 / 3.0
-    ret += (20.0 * math.sin(y * PI) + 40.0 * math.sin(y / 3.0 * PI)) * 2.0 / 3.0
-    ret += (160.0 * math.sin(y / 12.0 * PI) + 320 * math.sin(y * PI / 30.0)) * 2.0 / 3.0
-    return ret
-
-
-def transformLon(x, y):
-    ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * math.sqrt(abs(x))
-    ret += (20.0 * math.sin(6.0 * x * PI) + 20.0 * math.sin(2.0 * x * PI)) * 2.0 / 3.0
-    ret += (20.0 * math.sin(x * PI) + 40.0 * math.sin(x / 3.0 * PI)) * 2.0 / 3.0
-    ret += (150.0 * math.sin(x / 12.0 * PI) + 300.0 * math.sin(x / 30.0 * PI)) * 2.0 / 3.0
-    return ret
-
-
 class QL76:
     def __init__(self, port, rx, tx):
         self._port = port
@@ -150,10 +134,8 @@ class QL76:
         lat_long = self.L76X_GPS_Information()
         lat = lat_long[2]
         long = lat_long[3]
-        self._calibration_lat = latitude - lat
-        print(self._calibration_lat)
-        self._calibration_long = longitude - long 
-        print(self._calibration_long)
+        self._calibration_lat = lat - latitude
+        self._calibration_long = long - longitude
 
     @property
     def status(self):
