@@ -1,7 +1,9 @@
 from machine import I2C, Pin
 from math import floor
+from micropython import const
+import time
 
-DS3231_I2C_ADDRESS = 0x68
+DS3231_I2C_ADDRESS = const(0x68)
 
 
 def decodeToDec(byte):
@@ -28,11 +30,11 @@ class I2C_COM:
 
 
 class DS3231:
-
     def __init__(self, i2c_id: int, scl: int, sda: int, i2c_address: int = DS3231_I2C_ADDRESS):
         # create RTC instance with I2C Pins
         self._i2c = I2C_COM(i2c_address, I2C(i2c_id, scl=Pin(scl), sda=Pin(sda)))
         self._tmpStatus = 0
+        self._timezone = 3
 
     # get times functions
     # -------------------------------------------------------------------------------------------------------
@@ -107,6 +109,53 @@ class DS3231:
         self.setHour(hour)
         self.setMinutes(minutes)
         self.setSeconds(seconds)
+
+    @property
+    def timezone(self):
+        return self._timezone
+
+    @timezone.setter
+    def timezone(self, val):
+        self._timezone = val
+
+    @property
+    def unix(self):
+
+        dateTime = [0, 0, 0, 0, 0, 0, 0]
+        dateTime[0] = int(self.getYear())
+        dateTime[1] = int(self.getMonth())
+        dateTime[2] = int(self.getDay())
+        dateTime[3] = int(self.getDayOfWeek())
+        dateTime[4] = int(self.getHour())
+        dateTime[5] = int(self.getMinutes())
+        dateTime[6] = int(self.getSeconds())
+        current_year = dateTime[0]
+        if current_year % 4 == 0:
+            additional = 1
+        else:
+            additional = 0
+
+        current_month = dateTime[1]
+        unix_day = 31 + (28 + additional) - 1
+        for m in range(3, current_month):
+            if m % 2 != 0:
+                unix_day += 31
+            else:
+                unix_day += 30
+        unix_day = dateTime[2] + unix_day
+
+        unix = time.mktime((dateTime[0] + 2000, dateTime[1], dateTime[2], dateTime[4], dateTime[5], dateTime[6],
+                            dateTime[3], unix_day, -1)) - (self._timezone * 3600)
+        return unix
+
+    #
+    #         unix_day += current_day - 1
+    #         unix_day = unix_day * UNIX_DAY
+    #         unix_hour = self.getHour() * UNIX_HOUR
+    #         unix_min = self.getMinutes() * 60
+    #         unix_sec = self.getSeconds()
+    #         print(unix_year + unix_day )
+    #         return unix_year + unix_day + unix_hour + unix_min + unix_sec
 
     def getAlarm1(self):
         # returns list as:
@@ -256,3 +305,4 @@ def encodeDateTime(day, hour, minutes, seconds, alarmType):
     alarmTime[2] = (encodeToByte(minutes) & 0x7F) | ((alarmBits & 0x02) << 6)
     alarmTime[3] = (encodeToByte(seconds) & 0x7F) | ((alarmBits & 0x01) << 7)
     return alarmTime
+
