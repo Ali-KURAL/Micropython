@@ -1,3 +1,5 @@
+import struct
+
 from micropython import const
 from machine import SPI, Pin
 
@@ -26,6 +28,19 @@ _SPI_OPCODE_SSWR = const(0x42)  # Write special sector
 _SPI_OPCODE_SSRD = const(0x4B)  # Read special sector
 _SPI_OPCODE_FSSRD = const(0x49)
 _SPI_OPCODE_RDID = const(0x9F)  # Read device ID
+
+
+def float_to_bin(int_num):
+    bits, = struct.unpack('!I', struct.pack('!f', int_num))
+    return "{:032b}".format(bits)
+
+
+def bin_to_float(binary_str):  # ieee-745 bits (max 32 bit)
+    sign = int(binary_str[0])  # sign,     1 bit
+    exp = int(binary_str[1:9], 2)  # exponent, 8 bits
+    frac = int("1" + binary_str[9:], 2)  # fraction, len(N)-9 bits
+
+    return (-1) ** sign * frac / (1 << (len(binary_str) - 9 - (exp - 127)))
 
 
 class FRAM:
@@ -223,3 +238,58 @@ class FRAM:
         self._spi.write(write_buffer)
         if self._wp_pin is not None:
             self._wp_pin.value = value
+
+    def write_int16(self, value: int, address: int, special: bool = 0):
+        ba = int.to_bytes(value, 2, "big")
+        self.write(address, ba[0], special)
+        self.write(address + 1, ba[1], special)
+
+    def write_int32(self, value: int, address: int, special: bool = 0):
+        ba = int.to_bytes(value, 4, "big")
+        self.write(address, ba[0], special)
+        self.write(address + 1, ba[1], special)
+        self.write(address + 2, ba[2], special)
+        self.write(address + 3, ba[3], special)
+
+    def read_int16(self, address: int, special: bool = 0):
+        ba = bytearray(2)
+        ba[0] = self.read(address, special)
+        ba[1] = self.read(address + 1, special)
+        value = int.from_bytes(ba, "big")
+        return value
+
+    def read_int32(self, address: int, special: bool = 0):
+        ba = bytearray(4)
+        ba[0] = self.read(address, special)
+        ba[1] = self.read(address + 1, special)
+        ba[2] = self.read(address + 2, special)
+        ba[3] = self.read(address + 3, special)
+        value = int.from_bytes(ba, "big")
+        return value
+
+    def write_float32(self, value: float, address: int, special: bool = 0):
+        ieee754_str = float_to_bin(value)
+        b1 = int(ieee754_str[:8], 2)
+        b2 = int(ieee754_str[8:16], 2)
+        b3 = int(ieee754_str[16:24], 2)
+        b4 = int(ieee754_str[24:], 2)
+        self.write(address, b1, special)
+        self.write(address + 1, b2, special)
+        self.write(address + 2, b3, special)
+        self.write(address + 3, b4, special)
+
+    def read_float32(self, address: int, special: bool = 0):
+        ba = bytearray(4)
+        ba[0] = self.read(address, special)
+        ba[1] = self.read(address + 1, special)
+        ba[2] = self.read(address + 2, special)
+        ba[3] = self.read(address + 3, special)
+        value = int.from_bytes(ba, "big")
+        value = bin(value)[2:]
+        value_length = len(value)
+        if value_length < 32:
+            temp = 32 - value_length
+            return bin_to_float("0" * temp + value)
+        else:
+            return bin_to_float(value)
+
