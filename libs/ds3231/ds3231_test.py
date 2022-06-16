@@ -1,13 +1,3 @@
-# DS3231 library for micropython
-# tested on ESP8266
-#
-# Author: Sebastian Maerker
-# License: mit
-# 
-# only 24h mode is supported
-#
-# example on how to set the time on the DS3231
-
 from ds3231 import DS3231
 import machine
 import time
